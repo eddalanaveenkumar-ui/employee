@@ -3,20 +3,15 @@ import { Link, NavLink } from 'react-router-dom'
 
 const navigation = [
   { to: '/dashboard', label: 'Dashboard', number: '01' },
-  { to: '/tasks', label: 'My tasks', number: '02' },
+  { to: '/employees', label: 'Employees', number: '02' },
   { to: '/departments', label: 'Departments', number: '03' },
+  { to: '/tasks', label: 'Tasks', number: '04' },
+  { to: '/attendance', label: 'Attendance', number: '05' },
+  { to: '/settings', label: 'Settings', number: '06' },
 ]
 
-function getEmployeeName(employee) {
-  const emailName = employee?.email?.split('@')[0] ?? ''
-  return emailName
-    .replace(/[._-]+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase()) || 'Employee'
-}
-
 export default function Sidebar({ employee, onLogout }) {
-  const name = getEmployeeName(employee)
+  const name = employee?.name || 'Employee'
 
   return (
     <aside className="portal-sidebar">
@@ -43,7 +38,7 @@ export default function Sidebar({ employee, onLogout }) {
         <span className="sidebar-avatar" aria-hidden="true">{name.charAt(0)}</span>
         <span className="sidebar-user-info">
           <strong>{name}</strong>
-          <small>{employee?.department || 'Employee'}</small>
+          <small>{employee?.employeeId || 'Employee'}</small>
         </span>
         <button
           className="sidebar-logout"
