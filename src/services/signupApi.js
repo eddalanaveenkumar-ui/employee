@@ -1,29 +1,32 @@
-const mockDepartments = [
-  { id: 'engineering', name: 'Engineering' },
-  { id: 'human-resources', name: 'Human Resources' },
-  { id: 'finance', name: 'Finance' },
-  { id: 'operations', name: 'Operations' },
-  { id: 'sales', name: 'Sales' },
-]
-
-const registeredEmails = new Set()
-const registeredEmployeeIds = new Set()
+import * as api from './api.js'
 
 export async function getDepartments() {
-  // Replace this mock response with the departments API when its contract is available.
-  return Promise.resolve(mockDepartments)
+  // Fetch departments from the backend API
+  const departments = await api.getDepartments()
+  // Backend returns [{ id, departmentCode, departmentName }]
+  // Map to the shape the signup form expects: { id, name }
+  return departments.map((d) => ({
+    id: d.departmentCode,
+    name: d.departmentName,
+  }))
 }
 
 export async function registerEmployee(form) {
-  // Replace this mock registration with the backend request when its contract is available.
-  const email = form.email.trim().toLowerCase()
-  const employeeId = form.employeeId.trim().toLowerCase()
+  // POST /api/auth/register
+  // Backend expects: { employeeId, name, email, departmentCode, password }
+  const emailName = form.email
+    .split('@')[0]
+    .replace(/[._-]+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
 
-  if (registeredEmails.has(email) || registeredEmployeeIds.has(employeeId)) {
-    throw new Error('This email or employee ID is already registered.')
-  }
+  await api.register({
+    employeeId: form.employeeId.trim(),
+    name: emailName || 'Employee',
+    email: form.email.trim(),
+    departmentCode: form.department,
+    password: form.password,
+  })
 
-  registeredEmails.add(email)
-  registeredEmployeeIds.add(employeeId)
   return { success: true }
 }

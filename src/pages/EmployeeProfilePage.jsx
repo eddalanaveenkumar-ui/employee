@@ -1,71 +1,108 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useOutletContext, useParams } from 'react-router-dom'
-import {
-  getEmployeeById,
-  getDepartmentById,
-  toEmployeeProfile,
-} from '../services/portalData.js'
+import * as api from '../services/api.js'
 
 export default function EmployeeProfilePage() {
   const { employeeId } = useParams()
   const { employee: currentEmployee } = useOutletContext()
-  const isCurrentEmployee =
-    currentEmployee.employeeId.toLowerCase() === employeeId.toLowerCase()
-  const employee = isCurrentEmployee
-    ? toEmployeeProfile(currentEmployee)
-    : getEmployeeById(employeeId)
+  const isOwnProfile =
+    currentEmployee?.employeeId?.toLowerCase() === employeeId?.toLowerCase()
 
-  if (!employee) {
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setError('')
+
+    const fetchProfile = isOwnProfile
+      ? api.getProfile()
+      : api.getEmployeeById(employeeId)
+
+    fetchProfile
+      .then((data) => { if (active) setProfile(data) })
+      .catch((err) => { if (active) setError(err.message || 'Employee not found.') })
+      .finally(() => { if (active) setLoading(false) })
+
+    return () => { active = false }
+  }, [employeeId, isOwnProfile])
+
+  if (loading) {
     return (
       <section className="page-content">
-        <p className="eyebrow">COMPANY DIRECTORY</p>
-        <h1>Employee not found</h1>
-        <Link className="back-link" to="/departments">Back to departments</Link>
+        <p className="empty-state">Loading profile…</p>
       </section>
     )
   }
 
-  const departmentName = employee.department
-    || getDepartmentById(employee.departmentId)?.name
-    || 'Department not set'
+  if (error || !profile) {
+    return (
+      <section className="page-content">
+        <p className="eyebrow">COMPANY DIRECTORY</p>
+        <h1>Employee not found</h1>
+        {error && <p className="form-alert" role="alert" style={{ marginTop: 12 }}>{error}</p>}
+        <Link className="back-link" to="/employees" style={{ marginTop: 16, display: 'inline-block' }}>
+          ← Back to employees
+        </Link>
+      </section>
+    )
+  }
+
+  const name = profile.name || 'Employee'
+  const initials = name.split(' ').map((p) => p.charAt(0)).join('')
 
   return (
     <section className="page-content" aria-labelledby="employee-profile-title">
-      <Link
-        className="back-link"
-        to={employee.departmentId ? `/departments/${employee.departmentId}/employees` : '/departments'}
-      >
-        ← {employee.departmentId ? 'Department employees' : 'All departments'}
-      </Link>
+      <Link className="back-link" to="/employees">← Employees</Link>
+
       <header className="profile-header">
-        <span className="profile-avatar" aria-hidden="true">
-          {employee.name.split(' ').map((part) => part.charAt(0)).join('')}
-        </span>
+        <span className="profile-avatar" aria-hidden="true">{initials}</span>
         <div>
           <p className="eyebrow">EMPLOYEE PROFILE</p>
-          <h1 id="employee-profile-title">{employee.name}</h1>
-          <p>{employee.jobTitle}</p>
+          <h1 id="employee-profile-title">{name}</h1>
+          <p>{profile.departmentName || '—'}</p>
         </div>
       </header>
 
       <dl className="profile-details">
         <div>
           <dt>Employee ID</dt>
-          <dd>{employee.id}</dd>
+          <dd>{profile.employeeId}</dd>
         </div>
         <div>
           <dt>Department</dt>
-          <dd>{departmentName}</dd>
+          <dd>{profile.departmentName || '—'}</dd>
         </div>
         <div>
           <dt>Work email</dt>
-          <dd>{employee.email || 'Not provided'}</dd>
+          <dd>{profile.email || 'Not provided'}</dd>
         </div>
         <div>
-          <dt>Location</dt>
-          <dd>{employee.location || 'Not specified'}</dd>
+          <dt>Department code</dt>
+          <dd>{profile.departmentCode || '—'}</dd>
         </div>
       </dl>
+
+      {/* Read-only notice for other employees' profiles */}
+      {!isOwnProfile && (
+        <p className="dashboard-note" style={{ marginTop: 16 }}>
+          You are viewing a read-only profile. To manage your own account, go to{' '}
+          <Link to="/settings" style={{ color: 'var(--primary-blue)', fontWeight: 600, textDecoration: 'none' }}>
+            Settings
+          </Link>.
+        </p>
+      )}
+
+      {/* Own profile link to settings */}
+      {isOwnProfile && (
+        <p className="dashboard-note" style={{ marginTop: 16 }}>
+          <Link to="/settings" style={{ color: 'var(--primary-blue)', fontWeight: 600, textDecoration: 'none' }}>
+            Go to Settings
+          </Link>{' '}to change your password or log out.
+        </p>
+      )}
     </section>
   )
 }

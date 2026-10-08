@@ -1,15 +1,46 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { toEmployeeProfile } from '../services/portalData.js'
-
-const demoMetrics = {
-  attendance: 96,
-  performance: 88,
-}
+import * as api from '../services/api.js'
 
 export default function Dashboard() {
   const { employee } = useOutletContext()
-  const profile = toEmployeeProfile(employee)
+  const [dashboard, setDashboard] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    api.getDashboard()
+      .then((data) => { if (active) setDashboard(data) })
+      .catch((err) => { if (active) setError(err.message || 'Failed to load dashboard.') })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  if (loading) {
+    return (
+      <section className="page-content">
+        <p className="empty-state">Loading dashboard…</p>
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section className="page-content">
+        <header className="page-heading">
+          <p className="eyebrow">OVERVIEW</p>
+          <h1>Dashboard</h1>
+        </header>
+        <p className="form-alert" role="alert">{error}</p>
+      </section>
+    )
+  }
+
+  const name = dashboard?.name || employee?.name || 'Employee'
+  const department = dashboard?.department || '—'
+  const attendance = dashboard?.attendancePercentage ?? 0
+  const performance = dashboard?.performanceScore ?? 0
 
   return (
     <section className="page-content" aria-labelledby="dashboard-title">
@@ -20,11 +51,11 @@ export default function Dashboard() {
       </header>
 
       <section className="employee-summary" aria-label="Employee details">
-        <div className="employee-avatar" aria-hidden="true">{profile.name.charAt(0)}</div>
+        <div className="employee-avatar" aria-hidden="true">{name.charAt(0)}</div>
         <div>
           <p className="summary-label">Logged in as</p>
-          <h2>{profile.name}</h2>
-          <p className="department-line">{profile.department}</p>
+          <h2>{name}</h2>
+          <p className="department-line">{department}</p>
         </div>
       </section>
 
@@ -34,13 +65,13 @@ export default function Dashboard() {
             <p className="metric-label">Attendance</p>
             <span className="metric-symbol" aria-hidden="true">◷</span>
           </div>
-          <p className="metric-value">{demoMetrics.attendance}%</p>
+          <p className="metric-value">{attendance}%</p>
           <div
             className="metric-track"
             role="img"
-            aria-label={`Attendance ${demoMetrics.attendance}%`}
+            aria-label={`Attendance ${attendance}%`}
           >
-            <span style={{ width: `${demoMetrics.attendance}%` }} />
+            <span style={{ width: `${attendance}%` }} />
           </div>
         </article>
         <article className="metric-card">
@@ -48,17 +79,16 @@ export default function Dashboard() {
             <p className="metric-label">Performance score</p>
             <span className="metric-symbol" aria-hidden="true">↗</span>
           </div>
-          <p className="metric-value">{demoMetrics.performance}<span>/100</span></p>
+          <p className="metric-value">{performance}<span>/100</span></p>
           <div
             className="metric-track"
             role="img"
-            aria-label={`Performance score ${demoMetrics.performance} out of 100`}
+            aria-label={`Performance score ${performance} out of 100`}
           >
-            <span style={{ width: `${demoMetrics.performance}%` }} />
+            <span style={{ width: `${performance}%` }} />
           </div>
         </article>
       </div>
-      <p className="dashboard-note">Sample dashboard metrics for demonstration.</p>
     </section>
   )
 }
